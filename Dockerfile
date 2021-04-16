@@ -6,9 +6,8 @@
 # COPY --from=builder /go/src/github.com/openshift/must-gather/collection-scripts/* /usr/bin/
 
 FROM quay.io/openshift/origin-must-gather:4.5.0
-# RUN rm -f /usr/bin/gather
 COPY collection-scripts/* /usr/bin/
-# RUN chmod +x /usr/bin/gather
-# RUN chmod +x /usr/bin/gather-sosreports
+RUN chmod +x /usr/bin/gather
+RUN chmod +x /usr/bin/gather-sosreports
 
-# ENTRYPOINT /usr/bin/gather
+ENTRYPOINT /usr/bin/gather
