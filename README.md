@@ -2,9 +2,9 @@
 
 ## About
 
-Must gather image for the collection of sosreports that builts on top of the must-gather image: [https://github.com/openshift/must-gather](https://github.com/openshift/must-gather)
+Must gather image for the collection of sosreports which builds on top of the must-gather image: [https://github.com/openshift/must-gather](https://github.com/openshift/must-gather)
 
-Sosreports are generated in a rolling fashion with a concurrency of a single sosreports generation per node at a time.
+Sosreports are generated in a rolling fashion with a concurrency of a single sosreport generation per node at a time.
 
 ## Usage
 
