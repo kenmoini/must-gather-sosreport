@@ -7,7 +7,5 @@
 
 FROM quay.io/openshift/origin-must-gather:4.5.0
 COPY collection-scripts/* /usr/bin/
-RUN chmod +x /usr/bin/gather
-RUN chmod +x /usr/bin/gather-sosreports
 
-ENTRYPOINT /usr/bin/gather
+ENTRYPOINT /bin/bash /usr/bin/gather

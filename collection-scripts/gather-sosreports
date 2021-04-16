@@ -5,4 +5,13 @@ SOSREPORT_DUMP_PATH=${OUT:-"${BASE_COLLECTION_PATH}/node_sosreports"}
 
 mkdir -p $SOSREPORT_DUMP_PATH 2>/dev/null
 
-oc get nodes > $SOSREPORT_DUMP_PATH/oc_get_nodes.txt
+LABEL=""
+while getopts "l:" OPTION; do
+    case $OPTION in
+    l)
+        LABEL="-l $OPTARG"
+        ;;
+    esac
+done
+
+oc get nodes -l > $SOSREPORT_DUMP_PATH/oc_get_nodes.txt
