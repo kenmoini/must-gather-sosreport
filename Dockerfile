@@ -8,4 +8,4 @@
 FROM quay.io/openshift/origin-must-gather:4.5.0
 COPY collection-scripts/* /usr/bin/
 
-ENTRYPOINT /bin/bash /usr/bin/gather
+# ENTRYPOINT /bin/bash /usr/bin/gather
