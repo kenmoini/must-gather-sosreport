@@ -7,6 +7,6 @@
 
 FROM quay.io/openshift/origin-must-gather:4.5.0
 WORKDIR /go/src/github.com/openshift/must-gather
-COPY collection-scripts/* /usr/bin
+COPY collection-scripts/* /usr/bin/
 
 ENTRYPOINT /usr/bin/gather
