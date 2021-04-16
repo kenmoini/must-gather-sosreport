@@ -14,4 +14,4 @@ while getopts "l:" OPTION; do
     esac
 done
 
-oc get nodes -l > $SOSREPORT_DUMP_PATH/oc_get_nodes.txt
+oc get nodes $LABEL > $SOSREPORT_DUMP_PATH/oc_get_nodes.txt
