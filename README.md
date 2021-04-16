@@ -12,26 +12,26 @@ Sosreports are generated in a rolling fashion with a concurrency of a single sos
 
 The following will generate and download sosreports for all nodes of the cluster:
 ~~~
-oc adm must-gather --image=quay.io/akaris/must-gather-sosreport -- /usr/bin/gather
+oc adm must-gather --image=quay.io/akaris/must-gather-sosreport:latest -- /bin/bash /usr/bin/gather-sosreports
 ~~~
 
 ### Gathering sosreports for all master nodes
 
 The following will generate and download sosreports for all master nodes of the cluster:
 ~~~
-oc adm must-gather --image=quay.io/akaris/must-gather-sosreport -- /usr/bin/gather_masters
+oc adm must-gather --image=quay.io/akaris/must-gather-sosreport:latest -- /bin/bash /usr/bin/gather-sosreports -l node-role.kubernetes.io/master=
 ~~~
 
 ### Gathering sosreports for all worker nodes
 
 The following will generate and download sosreports for all worker nodes of the cluster:
 ~~~
-oc adm must-gather --image=quay.io/akaris/must-gather-sosreport -- /usr/bin/gather_workers
+oc adm must-gather --image=quay.io/akaris/must-gather-sosreport:latest -- /bin/bash /usr/bin/gather-sosreports -l node-role.kubernetes.io/worker=
 ~~~
 
 ### Gathering sosreports for a subset of nodes
 
 It is possible to gather sosreports by label:
 ~~~
-oc adm must-gather --image=quay.io/akaris/must-gather-sosreport -- /usr/bin/gather -l kubernetes.io/hostname=openshift-worker-0
+oc adm must-gather --image=quay.io/akaris/must-gather-sosreport:latest -- /bin/bash /usr/bin/gather-sosreports -l kubernetes.io/hostname=openshift-worker-0
 ~~~
