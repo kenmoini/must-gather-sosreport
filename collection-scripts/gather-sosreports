@@ -1,0 +1,8 @@
+#!/bin/bash
+
+BASE_COLLECTION_PATH="/must-gather"
+SOSREPORT_DUMP_PATH=${OUT:-"${BASE_COLLECTION_PATH}/node_sosreports"}
+
+mkdir -p $SOSREPORT_DUMP_PATH 2>/dev/null
+
+oc get nodes > $SOSREPORT_DUMP_PATH/oc_get_nodes.txt
