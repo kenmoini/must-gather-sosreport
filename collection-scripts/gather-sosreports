@@ -3,7 +3,85 @@
 BASE_COLLECTION_PATH="/must-gather"
 SOSREPORT_DUMP_PATH=${OUT:-"${BASE_COLLECTION_PATH}/node_sosreports"}
 
-mkdir -p $SOSREPORT_DUMP_PATH 2>/dev/null
+function gather_sosreport() {
+	local node=$1
+
+	tmp_file=$(mktemp)
+	cat <<'EOF' > $tmp_file
+#!/bin/bash
+
+chroot /host /usr/bin/sudo --preserve-env /bin/bash -x <<'EOT'
+REGISTRY=registry.redhat.io
+IMAGE=rhel8/support-tools
+TOOLBOX_NAME=toolbox-"$(whoami)-sosreport-$(uuidgen | cut -b-8)"
+TOOLBOXRC="/root/.toolboxrc"
+
+if [ -f "${TOOLBOXRC}" ]; then
+    echo ".toolboxrc file detected, overriding defaults..."
+    source "${TOOLBOXRC}"
+fi
+TOOLBOX_IMAGE="${REGISTRY}"/"${IMAGE}"
+
+podman pull --authfile /var/lib/kubelet/config.json "$TOOLBOX_IMAGE"
+
+podman run \
+  --rm \
+  --hostname $(hostname) \
+  --name "$TOOLBOX_NAME" \
+  --privileged \
+  --net=host \
+  --pid=host \
+  --ipc=host \
+  -e HOST=/host \
+  -e NAME="$TOOLBOX_NAME" \
+  -e IMAGE="$IMAGE" \
+  --security-opt label=disable \
+  --volume /run:/run \
+  --volume /var/log:/var/log \
+  --volume /etc/machine-id:/etc/machine-id \
+  --volume /etc/localtime:/etc/localtime \
+  --volume /:/host \
+   "$TOOLBOX_IMAGE" \
+  sosreport -k crio.all=on -k crio.logs=on --batch --all-logs 2>/dev/null | tee /tmp/must_gather_sosreport.log
+EOT
+EOF
+
+	# Get debug pod's name and exit right away
+	debug_pod=$(oc debug --to-namespace=default ${node} -o jsonpath='{.metadata.name}')
+	
+	#Start Debug pod force it to stay up until removed in "default" namespace
+	oc debug --to-namespace=default ${node} -- /bin/bash -c 'sleep infinity' > /dev/null 2>&1 &
+
+	sleep 2
+	oc wait -n "default" --for=condition=Ready pod/${debug_pod} --timeout=30s
+
+	# Copy script to the debug pod
+	oc cp --loglevel 1 -n default $tmp_file "${debug_pod}":/tmp/sosreport.sh
+
+	# Execute script
+	oc exec -n default ${debug_pod} -- /bin/bash /tmp/sosreport.sh
+
+	# get sosreport archive name
+	tmp_sosreport_file=$(oc exec -n default ${debug_pod} -- grep 'tar.xz' /host/tmp/must_gather_sosreport.log  | awk '{print $1}')
+
+	# abort if the name is empty
+	if [ "$tmp_sosreport_file" == "" ]; then
+		echo "Could not get sosreport file"
+		return
+	fi
+
+	oc cp --loglevel 1 -n default \
+	  ${debug_pod}:${tmp_sosreport_file} \
+	  ${SOSREPORT_DUMP_PATH}/$(basename ${tmp_sosreport_file})
+
+	oc exec -n default ${debug_pod} -- rm -f ${tmp_sosreport_file}
+
+	oc delete pod "${debug_pod}" -n "default"  
+
+	rm -f ${tmp_file}
+}
+
+mkdir -p ${SOSREPORT_DUMP_PATH}
 
 LABEL=""
 while getopts "l:" OPTION; do
@@ -14,4 +92,11 @@ while getopts "l:" OPTION; do
     esac
 done
 
-oc get nodes $LABEL > $SOSREPORT_DUMP_PATH/oc_get_nodes.txt
+nodes=$(oc get nodes -o name $LABEL)
+
+for n in $nodes ; do
+	echo "Gathering sosreport for $n"
+	gather_sosreport $n
+done
+
+
