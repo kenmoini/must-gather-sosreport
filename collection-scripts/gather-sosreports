@@ -122,5 +122,11 @@ nodes=$(oc get nodes -o name $LABEL)
 
 for n in $nodes ; do
 	echo "Gathering sosreport for $n"
+	if [ "$REGISTRY" != "" ]; then
+		echo "Using provided registry: $REGISTRY"
+	fi
+	if [ "$IMAGE" != "" ]; then
+		echo "Using provided registry: $IMAGE"
+	fi
 	gather_sosreport $n $REGISTRY $IMAGE
 done
