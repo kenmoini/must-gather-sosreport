@@ -61,8 +61,8 @@ podman run \
   sosreport -k crio.all=on -k crio.logs=on --batch --all-logs 2>/dev/null | tee /tmp/must_gather_sosreport.log
 EOT
 EOF
-sed -i "s/^USER_REGISTRY=/USER_REGISTRY=\"$registry\"/" ${tmp_file}
-sed -i "s/^USER_IMAGE=/USER_IMAGE=\"$image\"/" ${tmp_file}
+sed -i "s#^USER_REGISTRY=#USER_REGISTRY=\"$registry\"#" ${tmp_file}
+sed -i "s#^USER_IMAGE=#USER_IMAGE=\"$image\"#" ${tmp_file}
 
 	# Get debug pod's name and exit right away
 	debug_pod=$(oc debug --to-namespace=default ${node} -o jsonpath='{.metadata.name}')
