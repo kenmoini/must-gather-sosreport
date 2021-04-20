@@ -38,8 +38,13 @@ oc adm must-gather --image=quay.io/akaris/must-gather-sosreport:latest --timeout
 
 ### Changing the support-tools image
 
-Create file `/root/.toolboxrc` and specify a replacement registry and image. This step must be repeated on every nodein the cluster:
+Either provide a registry and image as parameters to the `gather-sosreports` script:
 ~~~
-REGISTRY=registry.fedoraproject.org
-IMAGE=f33/fedora-toolbox:latest
+oc adm must-gather --timeout=60m  --image=quay.io/akaris/must-gather-sosreport:latest -- /bin/bash -x /usr/bin/gather-sosreports -l kubernetes.io/hostname=openshift-worker-0 -r registry.example.com:5000 -i support-tools:0.0.2
+~~~
+
+Or create file `/root/.toolboxrc` and specify a replacement registry and image. This step must be repeated on every node in the cluster:
+~~~
+REGISTRY=registry.example.com:5000
+IMAGE=support-tools:0.0.2
 ~~~
