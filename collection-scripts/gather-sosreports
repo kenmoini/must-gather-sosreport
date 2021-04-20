@@ -66,7 +66,7 @@ EOF
 
 	# Get debug pod's name and exit right away
 	debug_pod=$(oc debug --to-namespace=default ${node} -o jsonpath='{.metadata.name}')
-	
+
 	#Start Debug pod force it to stay up until removed in "default" namespace
 	oc debug --to-namespace=default ${node} -- /bin/bash -c 'sleep infinity' > /dev/null 2>&1 &
 
@@ -94,7 +94,7 @@ EOF
 
 	oc exec -n default ${debug_pod} -- rm -f ${tmp_sosreport_file}
 
-	oc delete pod "${debug_pod}" -n "default"  
+	oc delete pod "${debug_pod}" -n "default"
 
 	rm -f ${tmp_file}
 }
