@@ -2,30 +2,40 @@
 
 BASE_COLLECTION_PATH="/must-gather"
 SOSREPORT_DUMP_PATH=${OUT:-"${BASE_COLLECTION_PATH}/node_sosreports"}
+# 20 minutes timeout for a sosreport pod should be reasonablef
+POD_TIMEOUT=1200
 
+# Gather a sosreport on a specific node
+# Parameters:
+# $1 - node name: argument to oc debug node in format node/<name>
+# $2 - registry:  URL to custom registry for image overwrite of toolbox image
+# $3 - image:     image name for image overwrite of toolbox image
 function gather_sosreport() {
 	local node=$1
 	local registry=$2
 	local image=$3
 
+	# Because we have to chroot, sudo and start a toolbox container
+	# it is easier to run this in a script which is then copied to
+	# the debug pod
 	tmp_file=$(mktemp)
 	cat <<'EOF' > $tmp_file
 #!/bin/bash
 
 chroot /host /usr/bin/sudo --preserve-env /bin/bash -x <<'EOT'
-# defaults first
+# Defaults first
 REGISTRY=registry.redhat.io
 IMAGE=rhel8/support-tools
 TOOLBOX_NAME=toolbox-"$(whoami)-sosreport-$(uuidgen | cut -b-8)"
 TOOLBOXRC="/root/.toolboxrc"
 
-# second if .toolboxrc file exists, take its values
+# Second if .toolboxrc file exists, take its values
 if [ -f "${TOOLBOXRC}" ]; then
     echo ".toolboxrc file detected, overriding defaults..."
     source "${TOOLBOXRC}"
 fi
 
-# third if user overrides are set, use those
+# Third if user overrides are set, use those
 USER_REGISTRY=""
 USER_IMAGE=""
 if [ "${USER_REGISTRY}" != "" ]; then
@@ -35,7 +45,7 @@ if [ "${USER_IMAGE}" != "" ]; then
     IMAGE="${USER_IMAGE}"
 fi
 
-# now, concat registry and image
+# Now, concat registry and image
 TOOLBOX_IMAGE="${REGISTRY}"/"${IMAGE}"
 
 podman pull --authfile /var/lib/kubelet/config.json "$TOOLBOX_IMAGE"
@@ -61,44 +71,68 @@ podman run \
   sosreport -k crio.all=on -k crio.logs=on --batch --all-logs 2>/dev/null | tee /tmp/must_gather_sosreport.log
 EOT
 EOF
+	# Set overrides if a user provided registry and image are provided
 	sed -i "s#^USER_REGISTRY=#USER_REGISTRY=\"$registry\"#" ${tmp_file}
 	sed -i "s#^USER_IMAGE=#USER_IMAGE=\"$image\"#" ${tmp_file}
 
 	# Get debug pod's name and exit right away
-	debug_pod=$(oc debug --to-namespace=default ${node} -o jsonpath='{.metadata.name}')
+	debug_pod=$(oc debug ${node} -o jsonpath='{.metadata.name}')
 
-	#Start Debug pod force it to stay up until removed in "default" namespace
-	oc debug --to-namespace=default ${node} -- /bin/bash -c 'sleep infinity' > /dev/null 2>&1 &
+	# Start Debug pod force it to stay up until POD_TIMEOUT is reached
+	oc debug ${node} -- /bin/bash -c "sleep ${POD_TIMEOUT}" > /dev/null 2>&1 &
 
-	sleep 2
-	oc wait -n "default" --for=condition=Ready pod/${debug_pod} --timeout=30s
+	# Wait 300 seconds for this pod to come up
+	for i in {1..10}; do
+	    echo "Waiting for pod ${debug_pod} to be ready. Try $i"
+	    sleep 2
+	    oc wait --for=condition=Ready pod/${debug_pod} --timeout=30s
+	done
+	if [ "$?" != "0" ]; then
+	    echo "Debug pod did not spawn for node ${node}."    
+	    return
+	fi
 
 	# Copy script to the debug pod
-	oc cp --loglevel 1 -n default $tmp_file "${debug_pod}":/tmp/sosreport.sh
+	oc cp --loglevel 1 $tmp_file "${debug_pod}":/tmp/sosreport.sh
 
 	# Execute script
-	oc exec -n default ${debug_pod} -- /bin/bash /tmp/sosreport.sh
+	oc exec ${debug_pod} -- /bin/bash /tmp/sosreport.sh
 
-	# get sosreport archive name
-	tmp_sosreport_file=$(oc exec -n default ${debug_pod} -- grep 'tar.xz' /host/tmp/must_gather_sosreport.log  | awk '{print $1}')
+	# Copy the log output to the local host to track why a sosreport failed, 
+	# if it failed
+	oc cp --loglevel 1 \
+	  ${debug_pod}:/host/tmp/must_gather_sosreport.log \
+	  ${SOSREPORT_DUMP_PATH}/must_gather_sosreport.${node}.log
 
-	# abort if the name is empty
+	# Get sosreport archive name
+	tmp_sosreport_file=$(
+	    cat ${SOSREPORT_DUMP_PATH}/must_gather_sosreport.${node}.log  | awk '/tar.xz/ {print $1}'
+        )
+
+	# Abort if the name is empty
 	if [ "$tmp_sosreport_file" == "" ]; then
-		echo "Could not get sosreport file"
+		echo "Could not get sosreport file name"
 		return
 	fi
 
-	oc cp --loglevel 1 -n default \
+	# Copy the sosreport to the local host
+	oc cp --loglevel 1 \
 	  ${debug_pod}:${tmp_sosreport_file} \
 	  ${SOSREPORT_DUMP_PATH}/$(basename ${tmp_sosreport_file})
 
-	oc exec -n default ${debug_pod} -- rm -f ${tmp_sosreport_file}
+	# Delete the original sosreport archive
+	# This is necessary as the sosreport is generated in /host/var/tmp on
+	# the node itself, and not inside the container
+	oc exec ${debug_pod} -- rm -f ${tmp_sosreport_file}
 
-	oc delete pod "${debug_pod}" -n "default"
+	# Clean up the debug pod
+	oc delete pod "${debug_pod}"
 
+	# Clean up the temp file with the script
 	rm -f ${tmp_file}
 }
 
+# Create a dedicated directory for sosreports
 mkdir -p ${SOSREPORT_DUMP_PATH}
 
 LABEL=""
@@ -118,8 +152,10 @@ while getopts "l:i:r:" OPTION; do
     esac
 done
 
+# Gather a list of nodes based on a specified label
 nodes=$(oc get nodes -o name $LABEL)
 
+# Loop through all nodes and gather sosreports for each of them
 for n in $nodes ; do
 	echo "Gathering sosreport for $n"
 	if [ "$REGISTRY" != "" ]; then
