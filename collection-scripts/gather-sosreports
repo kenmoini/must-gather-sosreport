@@ -86,10 +86,11 @@ EOF
 	    echo "Waiting for pod ${debug_pod} to be ready. Try $i"
 	    sleep 2
 	    oc wait --for=condition=Ready pod/${debug_pod} --timeout=30s
-	    if [ "$?" != "0" ] && [ "$i" -eq "10" ]; then
+	    ret_val="$?"
+	    if [ "$ret_val" != "0" ] && [ "$i" -eq "10" ]; then
 	        echo "Debug pod did not spawn for node ${node}."    
 	        return
-	    elif [ "$?" == "0" ]; then
+	    elif [ "$ret_val" == "0" ]; then
 	        break
             fi
 	done
