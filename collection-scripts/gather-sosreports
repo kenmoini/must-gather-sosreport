@@ -109,7 +109,7 @@ EOF
 
 	# Get sosreport archive name
 	tmp_sosreport_file=$(
-	    cat ${SOSREPORT_DUMP_PATH}/must_gather_sosreport.${node}.log  | awk '/tar.xz/ {print $1}'
+	    grep "tar.xz" | ${SOSREPORT_DUMP_PATH}/must_gather_sosreport.${node}.log  | awk '{print $1}'
         )
 
 	# Abort if the name is empty
