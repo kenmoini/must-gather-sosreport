@@ -24,7 +24,7 @@ function gather_sosreport() {
 	cat <<'EOF' > $tmp_file
 #!/bin/bash
 
-chroot /host /usr/bin/sudo --preserve-env /bin/bash -x <<'EOT'
+chroot /host /usr/bin/sudo --preserve-env /bin/bash <<'EOT'
 # Defaults first
 REGISTRY=registry.redhat.io
 IMAGE=rhel8/support-tools
