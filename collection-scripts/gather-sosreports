@@ -119,11 +119,10 @@ EOF
 	oc cp --loglevel 1 \
 	  ${debug_pod}:/host/tmp/must_gather_sosreport.log \
 	  ${log_dest}
-	chmod +r ${log_dest}
 
 	# Get sosreport archive name
 	local tmp_sosreport_file=$(
-	    grep "tar.xz" | ${log_dest}  | awk '{print $1}'
+	    grep "tar.xz" ${log_dest}  | awk '{print $1}'
         )
 
 	# Abort if the name is empty
