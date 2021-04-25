@@ -107,7 +107,7 @@ EOF
 	fi
 
 	# Copy script to the debug pod
-	oc cp --loglevel 1 $tmp_file "${debug_pod}":/tmp/sosreport.sh
+	oc cp --loglevel 1 ${tmp_file} "${debug_pod}":/tmp/sosreport.sh
 
 	# Execute script
 	oc exec ${debug_pod} -- /bin/bash /tmp/sosreport.sh
