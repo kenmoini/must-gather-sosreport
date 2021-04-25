@@ -4,6 +4,8 @@ BASE_COLLECTION_PATH="/must-gather"
 SOSREPORT_DUMP_PATH=${OUT:-"${BASE_COLLECTION_PATH}/node_sosreports"}
 # 20 minutes timeout for a sosreport pod should be reasonablef
 POD_TIMEOUT=1200
+# Do not run a sosreport if the minimum availble GB is not met on /var/tmp
+MIN_AVAILBLE_GB=20
 
 # Gather a sosreport on a specific node
 # Parameters:
@@ -18,7 +20,7 @@ function gather_sosreport() {
 	# Because we have to chroot, sudo and start a toolbox container
 	# it is easier to run this in a script which is then copied to
 	# the debug pod
-	tmp_file=$(mktemp)
+	local tmp_file=$(mktemp)
 	cat <<'EOF' > $tmp_file
 #!/bin/bash
 
@@ -76,7 +78,7 @@ EOF
 	sed -i "s#^USER_IMAGE=#USER_IMAGE=\"$image\"#" ${tmp_file}
 
 	# Get debug pod's name and exit right away
-	debug_pod=$(oc debug ${node} -o jsonpath='{.metadata.name}')
+	local debug_pod=$(oc debug ${node} -o jsonpath='{.metadata.name}')
 
 	# Start Debug pod force it to stay up until POD_TIMEOUT is reached
 	oc debug ${node} -- /bin/bash -c "sleep ${POD_TIMEOUT}" > /dev/null 2>&1 &
@@ -95,6 +97,15 @@ EOF
             fi
 	done
 
+	local available_kb=$(oc exec ${debug_pod} -- df /host/var/tmp | tail -n+2 | awk '{print $4}')
+        local available_gb=$[ $available_bytes / 1024 /1024 ]
+	if [ "$available_gb" -lt "$MIN_AVAILBLE_GB" ]; then
+	    echo "Not enough disk space available on ${node}"
+	    echo "Not creating sosreport. Skipping."
+	    oc delete pod "${debug_pod}"
+	    return
+	fi
+
 	# Copy script to the debug pod
 	oc cp --loglevel 1 $tmp_file "${debug_pod}":/tmp/sosreport.sh
 
@@ -103,13 +114,15 @@ EOF
 
 	# Copy the log output to the local host to track why a sosreport failed, 
 	# if it failed
+	local node_simple="${node/node\//}"
+	local log_dest="${SOSREPORT_DUMP_PATH}/must_gather_sosreport.${node_simple}.log"
 	oc cp --loglevel 1 \
 	  ${debug_pod}:/host/tmp/must_gather_sosreport.log \
-	  ${SOSREPORT_DUMP_PATH}/must_gather_sosreport.${node/node\//}.log
+	  ${log_dest}
 
 	# Get sosreport archive name
-	tmp_sosreport_file=$(
-	    grep "tar.xz" | ${SOSREPORT_DUMP_PATH}/must_gather_sosreport.${node}.log  | awk '{print $1}'
+	local tmp_sosreport_file=$(
+	    grep "tar.xz" | ${log_dest}  | awk '{print $1}'
         )
 
 	# Abort if the name is empty
