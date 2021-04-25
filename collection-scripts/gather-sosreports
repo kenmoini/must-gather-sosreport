@@ -98,7 +98,7 @@ EOF
 	done
 
 	local available_kb=$(oc exec ${debug_pod} -- df /host/var/tmp | tail -n+2 | awk '{print $4}')
-        local available_gb=$[ $available_bytes / 1024 /1024 ]
+        local available_gb=$[ $available_kb / 1024 /1024 ]
 	if [ "$available_gb" -lt "$MIN_AVAILBLE_GB" ]; then
 	    echo "Not enough disk space available on ${node}"
 	    echo "Not creating sosreport. Skipping."
