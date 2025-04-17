@@ -70,7 +70,7 @@ podman run \
   --volume /etc/localtime:/etc/localtime \
   --volume /:/host \
    "$TOOLBOX_IMAGE" \
-  sosreport -k crio.all=on -k crio.logs=on --batch --all-logs 2>/dev/null | tee /tmp/must_gather_sosreport.log
+  sosreport -k crio.all=on -k crio.logs=on --batch --allow-system-changes --all-logs 2>/dev/null | tee /tmp/must_gather_sosreport.log
 EOT
 EOF
 	# Set overrides if a user provided registry and image are provided
