@@ -86,7 +86,7 @@ EOF
 	# Wait 300 seconds for this pod to come up
 	for i in {1..10}; do
 	    echo "Waiting for pod ${debug_pod} to be ready. Try $i"
-	    sleep 2
+	    sleep 30
 	    oc wait --for=condition=Ready pod/${debug_pod} --timeout=30s
 	    ret_val="$?"
 	    if [ "$ret_val" != "0" ] && [ "$i" -eq "10" ]; then
