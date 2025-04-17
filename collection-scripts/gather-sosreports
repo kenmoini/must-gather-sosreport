@@ -2,8 +2,8 @@
 
 BASE_COLLECTION_PATH="/must-gather"
 SOSREPORT_DUMP_PATH=${OUT:-"${BASE_COLLECTION_PATH}/node_sosreports"}
-# 20 minutes timeout for a sosreport pod should be reasonablef
-POD_TIMEOUT=1200
+# 30 minutes timeout for a sosreport pod should be reasonable
+POD_TIMEOUT=1800
 # Do not run a sosreport if the minimum availble GB is not met on /var/tmp
 MIN_AVAILBLE_GB=20
 
@@ -83,7 +83,7 @@ EOF
         oc new-project sos-mg-$debug_pod
 
 	# Start Debug pod force it to stay up until POD_TIMEOUT is reached
-	oc debug ${node} -- /bin/bash -c "sleep ${POD_TIMEOUT}" > /dev/null 2>&1 &
+	oc debug ${node} --to-namespace=sos-mg-$debug_pod -- /bin/bash -c "sleep ${POD_TIMEOUT}" > /dev/null 2>&1 &
 
 	# Wait 300 seconds for this pod to come up
 	for i in {1..10}; do
