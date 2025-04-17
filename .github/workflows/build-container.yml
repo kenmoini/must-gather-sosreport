@@ -3,7 +3,7 @@ name: Binaries - Build OCP Install Tools Container
 env:
   REGISTRY_HOSTNAME: quay.io
   REGISTRY_IMAGE: quay.io/kenmoini/must-gather-sosreport
-  BUILD_CONTEXT_PATH: /
+  BUILD_CONTEXT_PATH: .
   CONTAINERFILE_PATH: Dockerfile
 
 on:
