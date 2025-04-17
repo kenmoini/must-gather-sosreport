@@ -78,12 +78,12 @@ EOF
 	sed -i "s#^USER_IMAGE=#USER_IMAGE=\"$image\"#" ${tmp_file}
 
 	# Get debug pod's name and exit right away
-	local debug_pod=$(oc debug node/${node} -o jsonpath='{.metadata.name}')
+	local debug_pod=$(oc debug ${node} -o jsonpath='{.metadata.name}')
 
         oc new-project sos-mg-$debug_pod
 
 	# Start Debug pod force it to stay up until POD_TIMEOUT is reached
-	oc debug node/${node} -- /bin/bash -c "sleep ${POD_TIMEOUT}" > /dev/null 2>&1 &
+	oc debug ${node} -- /bin/bash -c "sleep ${POD_TIMEOUT}" > /dev/null 2>&1 &
 
 	# Wait 300 seconds for this pod to come up
 	for i in {1..10}; do
