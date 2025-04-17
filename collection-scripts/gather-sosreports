@@ -80,6 +80,8 @@ EOF
 	# Get debug pod's name and exit right away
 	local debug_pod=$(oc debug node/${node} -o jsonpath='{.metadata.name}')
 
+        oc new-project sos-mg-$debug_pod
+
 	# Start Debug pod force it to stay up until POD_TIMEOUT is reached
 	oc debug node/${node} -- /bin/bash -c "sleep ${POD_TIMEOUT}" > /dev/null 2>&1 &
 
