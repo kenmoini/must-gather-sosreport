@@ -85,6 +85,9 @@ EOF
 	# Start Debug pod force it to stay up until POD_TIMEOUT is reached
 	oc debug ${node} --to-namespace=sos-mg-$debug_pod -- /bin/bash -c "sleep ${POD_TIMEOUT}" > /dev/null 2>&1 &
 
+        sleep 5
+        local debug_pod=$(oc get pods -o name | grep debug | sed 's|pod/||')
+
 	# Wait 300 seconds for this pod to come up
 	for i in {1..10}; do
 	    echo "Waiting for pod ${debug_pod} to be ready. Try $i"
